@@ -52,6 +52,7 @@ def get_marker_color(speed):
     else:
         return "red"
 
+# Generate a detailed speed chart
 def generate_speed_chart(sensor_id):
     # Extract data for the selected sensor
     speeds_actual = actual_speeds[str(sensor_id)].tolist()  # 12 actual points
@@ -72,10 +73,10 @@ def generate_speed_chart(sensor_id):
 
     # Annotate each data point with speed
     for x, y in zip(time_continuous2, speeds_predicted):
-        plt.text(x, y + 0.03, f"{y:.1f}", fontsize=10, ha="center", va="bottom", color="red")
+        plt.text(x+ 0.005, y + 0.005, f"{y:.1f}", fontsize=10, ha="center", va="bottom", color="red")
 
     for x, y in zip(time_continuous1, speeds_actual):
-        plt.text(x, y + 0.03, f"{y:.1f}", fontsize=10, ha="center", va="bottom", color="blue")
+        plt.text(x+ 0.005, y + 0.005, f"{y:.1f}", fontsize=10, ha="center", va="bottom", color="blue")
 
     
     plt.legend(fontsize=12)
@@ -88,7 +89,6 @@ if selected_sensor_name == "All":
     # Display all sensors on the map
     for _, row in meta_data.iterrows():
         color = get_marker_color(row["Speed"])
-        # Add a marker with a popup containing the sensor chart
         folium.CircleMarker(
             location=[row["Latitude"], row["Longitude"]],
             radius=5,
@@ -98,32 +98,25 @@ if selected_sensor_name == "All":
             tooltip=f"Sensor {row['Name']}: {row['Speed']:.2f} km/h"
         ).add_to(m)
 else:
-    # Display only the selected sensor on the map
+    # Display selected sensor info
     selected_sensor_id = sensor_name_map[selected_sensor_name]
     sensor_info = meta_data[meta_data["sensor_id"] == selected_sensor_id]
     latitude = sensor_info.iloc[0]["Latitude"]
     longitude = sensor_info.iloc[0]["Longitude"]
     speed = sensor_info.iloc[0]["Speed"]
 
-    # Add a marker for the selected sensor
-    color = get_marker_color(speed)
-    folium.CircleMarker(
-        location=[latitude, longitude],
-        radius=10,  # Larger marker for the selected sensor
-        color=color,
-        fill=True,
-        fill_color=color,
-        tooltip=f"Sensor {selected_sensor_name}: {speed:.2f} km/h"
-    ).add_to(m)
-
-    # Display sensor information
     st.subheader(f"Sensor Name: {selected_sensor_name}")
     st.write(f"Sensor ID: {selected_sensor_id}")
     st.write(f"Latitude: {latitude}")
     st.write(f"Longitude: {longitude}")
     st.write(f"Speed: {speed:.2f} km/h")
 
-    # Generate speed chart for the selected sensor
+    folium.Marker(
+        location=[latitude, longitude],
+        popup=f"Sensor {selected_sensor_name}: {speed:.2f} km/h",
+        icon=folium.Icon(color="blue"),
+    ).add_to(m)
+
     generate_speed_chart(selected_sensor_id)
 
 # Display the map
