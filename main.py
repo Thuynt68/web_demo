@@ -61,8 +61,9 @@ def generate_speed_chart(sensor_id):
     time_continuous2 = list(range(0, 35, 5))
 
     plt.figure(figsize=(10, 6))
-    plt.plot(time_continuous1, speeds_actual, label="Speed Actual", color="blue", marker="o")
+    
     plt.plot(time_continuous2, speeds_predicted, label="Speed Predicted", color="red", marker="o")
+    plt.plot(time_continuous1, speeds_actual, label="Speed Actual", color="blue", marker="o")
 
     plt.title(f"Speed Data for Sensor {sensor_id}", fontsize=16)
     plt.xlabel("Time (minutes)", fontsize=12)
@@ -70,12 +71,13 @@ def generate_speed_chart(sensor_id):
     plt.grid(True, alpha=0.5)
 
     # Annotate each data point with speed
-    for x, y in zip(time_continuous1, speeds_actual):
-        plt.text(x, y, f"{y:.1f}", fontsize=8, ha="center", va="bottom", color="blue")
-
     for x, y in zip(time_continuous2, speeds_predicted):
-        plt.text(x, y, f"{y:.1f}", fontsize=8, ha="center", va="bottom", color="red")
+        plt.text(x, y + 0.03, f"{y:.1f}", fontsize=10, ha="center", va="bottom", color="red")
 
+    for x, y in zip(time_continuous1, speeds_actual):
+        plt.text(x, y + 0.03, f"{y:.1f}", fontsize=10, ha="center", va="bottom", color="blue")
+
+    
     plt.legend(fontsize=12)
     st.pyplot(plt)
 
