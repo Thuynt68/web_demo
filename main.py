@@ -1,8 +1,51 @@
 import streamlit as st
 import pandas as pd
 import folium
-from streamlit_folium import st_folium
+import json
+import h5py
+import pickle
 import matplotlib.pyplot as plt
+import tensorflow as tf
+
+from streamlit_folium import st_folium
+from spektral.layers import GCNConv
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Input, Flatten, Reshape, Permute
+from os.path import join
+
+class GCN_LSTM(tf.keras.Model):
+    def __init__(self, num_sensors, adj_matrix):
+        super(GCN_LSTM, self).__init__()
+        self.adj_matrix = tf.convert_to_tensor(adj_matrix, dtype=tf.float32)
+        self.gcn1 = GCNConv(gcn_hidden, activation="relu")
+        self.gcn2 = GCNConv(seq_len, activation="relu")
+        self.lstm1 = LSTM(lstm_hidden, activation='tanh', input_shape=(seq_len, num_sensors), 
+                          return_sequences=True)
+        self.lstm2 = LSTM(lstm_hidden, activation='tanh', return_sequences=True)
+
+        self.reshape1 = Reshape((-1, seq_len, 1))
+        self.reshape2 = Reshape((seq_len, -1))
+        self.gcn_permute = Permute((2, 1, 3))
+        self.lstm_permute = Permute((2, 1))
+        self.dropout = Dropout(drop)
+        self.dense = Dense(num_sensors)
+        self.out_dense = Dense(pre_len)
+
+    def call(self, inputs):
+        x = self.gcn1([inputs, self.adj_matrix])
+        x = self.dropout(x)
+        x = self.gcn2([x, self.adj_matrix])
+        x = self.dropout(x)
+        x = self.reshape1(x)
+        x = self.gcn_permute(x)
+        x = self.reshape2(x)
+        x = self.lstm1(x)
+        x = self.dropout(x)
+        x = self.lstm2(x)
+        x = self.dropout(x)
+        x = self.dense(x)
+        x = self.lstm_permute(x)
+        x = self.out_dense(x)
+        return x
 
 # Load metadata file
 def load_metadata(file_path):
@@ -19,6 +62,23 @@ meta_file = "data/PEMS-BAY-META.csv"
 speed_file = "data/PEMS-BAY.csv"
 meta_data = load_metadata(meta_file)
 speed_data = load_speed_data(speed_file)
+with open('data/adj_mx_bay.pkl', 'rb') as file:
+    sensor_, sensor_map, sensor_dist_adj = pickle.load(file, encoding='latin1')
+sensor = sensor_dist_adj.shape[0]
+
+#Load model
+parameter_path = 'parameters/gcnlstm/'
+file_name = 'gcnlstm1'
+with open(join(parameter_path, file_name, f"{file_name}.json"), "r") as file:
+    parameters = json.load(file)  
+seq_len = parameters['seq_len']
+pre_len = parameters['pre_len']
+gcn_hidden = parameters['gcn_hidden_units']
+lstm_hidden = parameters['lstm_hidden_units']
+drop = parameters['drop_rate']
+model_path = 'models/gcnlstm/'
+gcn_lstm_model = GCN_LSTM(sensor, adj_matrix=sensor_dist_adj)
+gcn_lstm_model.load_weights(join(model_path, file_name, f"{file_name}"))
 
 # Split the speed data into 12 actual and 6 predicted points
 actual_speeds = speed_data.iloc[:12, :]  # First 12 rows for actual speeds
